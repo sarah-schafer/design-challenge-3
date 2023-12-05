@@ -1,0 +1,26 @@
+body {
+  font-family: sans-serif;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+}
+
+#city1Selector {
+  background: #4C8BD7;
+  color: white;
+  margin: 10px;
+  padding: 2px;
+}
+
+#city2Selector {
+  background: #6157AF;
+  color: white;
+  margin: 10px;
+  padding: 2px;
+}
+
+.cloud-title {
+  font-size: 50px;
+}

@@ -1,16 +1,18 @@
-let city1;
-let city2;
-console.log("test");
+// Initialize Global Variables
+let city1; // data
+let city2; // data
 
-let city1Name = "CLT";
-let city2Name = "CQT";
+let city1Name = "CLT"; // default value
+let city2Name = "CQT"; // default value
 
+// Bounds for x and y axes
 let recMaxTemp;
 let recMinTemp;
 let earliestDay;
 let latestDay;
+let recPrecipitation;
 
-let svg = d3.select("svg");
+let svg = d3.select("svg.chartSvg");
 var svgWidth = +svg.attr('width');
 var svgHeight = +svg.attr('height');
 
@@ -18,6 +20,7 @@ let chartG = svg.append("g")
   .classed("chartG", true);
 let x;
 let y;
+let radius;
 
 var padding = {t: 60, r: 40, b: 30, l: 40};
 
@@ -25,22 +28,24 @@ var padding = {t: 60, r: 40, b: 30, l: 40};
 var chartWidth = svgWidth - padding.l - padding.r;
 var chartHeight = svgHeight - padding.t - padding.b;
 
+// To handle dates in datasets
 var parseDate = d3.timeParse('%Y-%m-%e');
 
-
+// Event Handling for changing first city
 function onCity1Change(){
   var select = d3.select('#city1Selector').node();
   var newCity1Name = select.options[select.selectedIndex].value;
   csvProcessing(newCity1Name, true);
 }
 
+// Event Handling for changing second city
 function onCity2Change(){
   var select = d3.select('#city2Selector').node();
   var newCity2Name = select.options[select.selectedIndex].value;
   csvProcessing(newCity2Name, false);
 }
 
-
+// Used to process data correctly (numbers as numbers not strings)
 function dataPreprocessor(row) {
     return {
         date: row.date,
@@ -59,12 +64,12 @@ function dataPreprocessor(row) {
     };
 }
 
-
+// Called whenever data needs to be loaded
 function csvProcessing(newCityName, isCity1){
 
   let csvName = "/data/" + newCityName + ".csv";
   d3.csv(csvName, dataPreprocessor).then(function(data) {
-
+    // determine where to save data
     if(isCity1){
       // save new data
       city1 = data;
@@ -81,6 +86,7 @@ function csvProcessing(newCityName, isCity1){
       });
     }
 
+    // Determine scales
     if(city1 && city2){ // both cities exist
       let city1RecMinTemp = d3.min(city1.map(function(d){
         return d.record_min_temp;
@@ -135,6 +141,18 @@ function csvProcessing(newCityName, isCity1){
         latestDay = city1LatestDay;
       }
 
+      let city1RecPrecip = d3.max(city1.map(function(d){
+        return d.record_precipitation;
+      }));
+      let city2RecPrecip = d3.max(city2.map(function(d){
+        return d.record_precipitation;
+      }));
+      if(city1RecPrecip >= city2RecPrecip){
+        recPrecipitation = city1RecPrecip;
+      } else {
+        recPrecipitation = city2RecPrecip;
+      }
+
 
     } else if(city1){ // city1 being loaded, city2 does not exist
       let city1RecMinTemp = d3.min(city1.map(function(d){
@@ -143,20 +161,9 @@ function csvProcessing(newCityName, isCity1){
       let city1RecMaxTemp = d3.max(city1.map(function(d){
         return d.record_max_temp;
       }));
-      if(recMinTemp){
-        if(recMinTemp > city1RecMinTemp){
-          recMinTemp = city1RecMinTemp;
-        }
-      } else {
-        recMinTemp = city1RecMinTemp;
-      }
-      if(recMaxTemp){
-        if(recMaxTemp < city1RecMaxTemp){
-          recMaxTemp = city1RecMaxTemp;
-        }
-      } else {
-        recMaxTemp = city1RecMaxTemp;
-      }
+
+      recMinTemp = city1RecMinTemp;
+      recMaxTemp = city1RecMaxTemp;
 
       earliestDay = d3.min(city1.map(function(d){
         return d.date;
@@ -164,6 +171,10 @@ function csvProcessing(newCityName, isCity1){
 
       latestDay = d3.max(city1.map(function(d){
         return d.date;
+      }));
+
+      recPrecipitation = d3.max(city1.map(function(d){
+        return d.record_precipitation;
       }));
     } else { // city2 being loaded, city1 does not exist
       let city2RecMinTemp = d3.min(city2.map(function(d){
@@ -173,21 +184,8 @@ function csvProcessing(newCityName, isCity1){
         return d.record_max_temp;
       }));
 
-      if(recMinTemp){
-        if(recMinTemp > city2RecMinTemp){
-          recMinTemp = city2RecMinTemp;
-        }
-      } else {
-        recMinTemp = city2RecMinTemp;
-      }
-      if(recMaxTemp){
-        if(recMaxTemp < city2RecMaxTemp){
-          recMaxTemp = city2RecMaxTemp;
-        }
-      } else {
-        recMaxTemp = city2RecMaxTemp;
-      }
-
+      recMinTemp = city2RecMinTemp;
+      recMaxTemp = city2RecMaxTemp;
 
       earliestDay = d3.min(city2.map(function(d){
         return d.date;
@@ -196,38 +194,44 @@ function csvProcessing(newCityName, isCity1){
       latestDay = d3.max(city2.map(function(d){
         return d.date;
       }));
+      recPrecipitation = d3.max(city2.map(function(d){
+        return d.record_precipitation;
+      }));
     }
 
-
+    // Remove all data currently on graph, so new data can be displayed
     chartG.selectAll(".chartG1").remove();
     chartG.selectAll(".chartG2").remove();
     chartG.selectAll(".axis")
       .remove();
 
-      y = d3.scaleLinear()
-        .domain([recMinTemp, recMaxTemp])
-        .range([chartHeight, 0]);
-      chartG.append("g")
-        .classed("axis", true)
-        .attr("transform", "translate(" + padding.l+", "+ padding.t +")")
-        .call(d3.axisLeft(y))
+    y = d3.scaleLinear()
+      .domain([recMinTemp, recMaxTemp])
+      .range([chartHeight, 0]);
+    chartG.append("g")
+      .classed("axis", true)
+      .attr("transform", "translate(" + padding.l+", "+ padding.t +")")
+      .call(d3.axisLeft(y))
 
-      x = d3.scaleTime()
-        .domain([earliestDay, latestDay])
-        .range([0, chartWidth]);
-      chartG.append("g")
-        .classed("axis", true)
-        .attr("transform", "translate("+ padding.l+", " + (padding.t + chartHeight) + ")")
-        .call(d3.axisBottom(x));
+    x = d3.scaleTime()
+      .domain([earliestDay, latestDay])
+      .range([0, chartWidth]);
+    chartG.append("g")
+      .classed("axis", true)
+      .attr("transform", "translate("+ padding.l+", " + (padding.t + chartHeight) + ")")
+      .call(d3.axisBottom(x));
 
+    radius = d3.scaleLinear()
+      .domain([0, Math.sqrt(recPrecipitation)])
+      .range([0, 20]);
 
+    // if currently loading in city2 and city1 exists, draw city1 first
     if(!isCity1 && city1){
       updateChart(true);
     }
-
-
+    // draw the chart we are currently working with
     updateChart(isCity1);
-
+    // if currently loading city1 and city2 exists, draw city2
     if(isCity1 && city2){
       updateChart(false);
     }
@@ -235,27 +239,26 @@ function csvProcessing(newCityName, isCity1){
   });
 }
 
+// Call functions with defaults when loading the page
 csvProcessing(city1Name, true);
 csvProcessing(city2Name, false);
 
 
-
+// Called whenever lollipops need to be drawn
 function updateChart(isCity1){
-
-  let currentChartG;
+  let currentChartG; // will store chart group
   let color;
-  let currentCity;
+  let currentCity; // will store data
 
   if(isCity1){
-    console.log("In questionable if statement");
     currentChartG = chartG.append("g")
       .classed("chartG1", true);
-    color = "#69b3a2";
+    color = "#4C8BD7";
     currentCity = city1;
   } else {
     currentChartG = chartG.append("g")
       .classed("chartG2", true);
-    color = "#4C4082";
+    color = "#6157AF";
     currentCity = city2;
   }
 
@@ -274,7 +277,8 @@ function updateChart(isCity1){
        .attr("y1", function(d) { return y(d.actual_min_temp); })
        .attr("y2", function(d) { return y(d.actual_max_temp); })
        .attr("stroke", color)
-       .attr("stroke-width", "1px");
+       .attr("stroke-width", "1px")
+       .style("opacity", "0.7");
 
   // Circles for min temp
   lollipopsG.selectAll("mycircle")
@@ -282,17 +286,32 @@ function updateChart(isCity1){
     .join("circle")
       .attr("cx", function(d) { return x(d.date); })
       .attr("cy", function(d) { return y(d.actual_min_temp); })
-      .attr("r", "6")
+      .attr("r", function(d){ return radius(d.actual_precipitation); })
       .style("fill", color)
-      .style("opacity", "0.7");
-
+      .style("opacity", "0.4");
+  lollipopsG.selectAll("mycircle")
+        .data(currentCity)
+        .join("circle")
+          .attr("cx", function(d) { return x(d.date); })
+          .attr("cy", function(d) { return y(d.actual_min_temp); })
+          .attr("r", "4")
+          .style("fill", color)
+          .style("opacity", "0.7");
   // Circles for min temp
   lollipopsG.selectAll("mycircle")
         .data(currentCity)
         .join("circle")
           .attr("cx", function(d) { return x(d.date); })
           .attr("cy", function(d) { return y(d.actual_max_temp); })
-          .attr("r", "6")
+          .attr("r", function(d){ return radius(d.actual_precipitation); })
           .style("fill", color)
-          .style("opacity", "0.7");
+          .style("opacity", "0.4");
+    lollipopsG.selectAll("mycircle")
+                .data(currentCity)
+                .join("circle")
+                  .attr("cx", function(d) { return x(d.date); })
+                  .attr("cy", function(d) { return y(d.actual_max_temp); })
+                  .attr("r", "4")
+                  .style("fill", color)
+                  .style("opacity", "0.7");
 }
