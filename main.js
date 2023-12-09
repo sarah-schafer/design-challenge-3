@@ -24,7 +24,7 @@ let radius;
 
 let cloudText;
 
-var padding = {t: 60, r: 40, b: 30, l: 40};
+var padding = {t: 30, r: 40, b: 30, l: 40};
 
 // Compute chart dimensions
 var chartWidth = svgWidth - padding.l - padding.r;
@@ -32,6 +32,37 @@ var chartHeight = svgHeight - padding.t - padding.b;
 
 // To handle dates in datasets
 var parseDate = d3.timeParse('%Y-%m-%e');
+
+let tooltipG;
+let tooltipDate;
+let tooltipTemp;
+let tooltipRain;
+
+// Handle Tooltip
+function callTooltip(){
+  tooltipG = chartG.append("g")
+    .classed("tooltipG", true)
+    .attr("opacity", "0");
+  tooltipG.append("rect")
+    .attr("fill", "white")
+    .attr("stroke", "black")
+    .attr("x", "0")
+    .attr("y", "0")
+    .attr("width", "100px")
+    .attr("height", "40px");
+  tooltipDate = tooltipG.append("text")
+    .attr("font-size", "9px")
+    .attr("x", "2")
+    .attr("y", "12");
+  tooltipTemp = tooltipG.append("text")
+    .attr("font-size", "9px")
+    .attr("x", "2")
+    .attr("y", "23");
+  tooltipRain = tooltipG.append("text")
+    .attr("font-size", "9px")
+    .attr("x", "2")
+    .attr("y", "33");
+}
 
 // Event Handling for changing first city
 function onCity1Change(){
@@ -64,20 +95,38 @@ function setScalesAndAxes(){
     .attr("transform", "translate("+ padding.l+", " + (padding.t + chartHeight) + ")")
     .call(d3.axisBottom(x));
 
+  chartG.append("text")
+    .classed("axis", true)
+    .attr("text-anchor", "middle")
+    .attr("font-size", "14")
+    .attr("transform", "translate("+ svgWidth/2 + ", " + (svgHeight - 2)+ ")")
+    .text("Date");
+  chartG.append("text")
+    .classed("axis", true)
+    .attr("text-anchor", "middle")
+    .attr("font-size", "14")
+    .attr("transform", "translate(14, " + (svgHeight/2)+ ") rotate(270)")
+    .text("Temperature (Degrees Celcius)");
+
   radius = d3.scaleLinear()
     .domain([0, Math.sqrt(recPrecipitation)])
     .range([0, 20]);
 
-  let endingIndexOfEarliestDay = earliestDay.toLocaleString().indexOf(",");
-  let endingIndexOfLatestDay = latestDay.toLocaleString().indexOf(",");
-  let formattedEarliest = earliestDay.toLocaleString().substr(0, endingIndexOfEarliestDay);
-  let formattedLatest = latestDay.toLocaleString().substr(0, endingIndexOfLatestDay);
+  let formattedEarliest = formatDate(earliestDay);
+  let formattedLatest = formatDate(latestDay);
   let formattedText = "From " + formattedEarliest + " to " + formattedLatest;
 
   cloudText = d3.select(".dateTitle")
     .text(formattedText);
   }
 
+// Helper function to format dates to be displayed
+function formatDate(date){
+  let localeString = date.toLocaleString();
+  let indexOfComma = localeString.indexOf(",");
+  let formattedString = localeString.substr(0, indexOfComma);
+  return formattedString;
+}
 
 // Used to process data correctly (numbers as numbers not strings)
 function dataPreprocessor(row) {
@@ -238,6 +287,7 @@ function csvProcessing(newCityName, isCity1){
       chartG.selectAll(".chartG2").remove();
       chartG.selectAll(".axis")
         .remove();
+      chartG.selectAll(".tooltipG").remove();
 
       setScalesAndAxes();
 
@@ -252,6 +302,7 @@ function csvProcessing(newCityName, isCity1){
         updateChart(false);
       }
 
+      callTooltip();
     });
   } else {
     if(isCity1){
@@ -264,8 +315,8 @@ function csvProcessing(newCityName, isCity1){
       // Remove all data currently on graph, so new data can be displayed
       chartG.selectAll(".chartG1").remove();
       chartG.selectAll(".chartG2").remove();
-      chartG.selectAll(".axis")
-        .remove();
+      chartG.selectAll(".axis").remove();
+      chartG.selectAll(".tooltipG").remove();
 
       let city2RecMinTemp = d3.min(city2.map(function(d){
         return d.record_min_temp;
@@ -289,12 +340,14 @@ function csvProcessing(newCityName, isCity1){
       }));
       setScalesAndAxes();
       updateChart(false);
+      callTooltip();
     } else if(!isCity1 && city1 != undefined){
       // Remove all data currently on graph, so new data can be displayed
       chartG.selectAll(".chartG1").remove();
       chartG.selectAll(".chartG2").remove();
       chartG.selectAll(".axis")
         .remove();
+      chartG.selectAll(".tooltipG").remove();
 
       let city1RecMinTemp = d3.min(city1.map(function(d){
         return d.record_min_temp;
@@ -319,11 +372,13 @@ function csvProcessing(newCityName, isCity1){
       }));
       setScalesAndAxes();
       updateChart(true);
+      callTooltip();
     } else {
       chartG.selectAll(".chartG1").remove();
       chartG.selectAll(".chartG2").remove();
       chartG.selectAll(".axis")
         .remove();
+      chartG.selectAll(".tooltipG").remove();
 
       chartG.append("text")
         .classed("chartG1", true)
@@ -392,9 +447,29 @@ function updateChart(isCity1){
         .join("circle")
           .attr("cx", function(d) { return x(d.date); })
           .attr("cy", function(d) { return y(d.actual_min_temp); })
-          .attr("r", "6")
+          .attr("r", "4")
           .style("fill", color)
-          .style("opacity", "0.6");
+          .attr("opacity", "0.6")
+          .on('mouseover', function (d, i) {
+              d3.select(this).transition()
+                  .duration('50')
+                  .attr('opacity', '1');
+                  tooltipG.transition()
+                      .duration('50')
+                      .attr("opacity", '1');
+                  tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l) + ", " + (y(d.actual_min_temp)+padding.t) +")");
+                  tooltipDate.text(formatDate(d.date));
+                  tooltipTemp.text("Min Temperature: " + d.actual_min_temp);
+                  tooltipRain.text("Precipitation: " + d.actual_precipitation);
+          })
+          .on('mouseout', function (d, i) {
+              d3.select(this).transition()
+                .duration('50')
+                .attr('opacity', '0.6');
+              tooltipG.transition()
+                .duration('50')
+                .attr("opacity", '0');
+          });
   // Circles for min temp
   lollipopsG.selectAll("mycircle")
         .data(currentCity)
@@ -404,12 +479,34 @@ function updateChart(isCity1){
           .attr("r", function(d){ return radius(d.actual_precipitation); })
           .style("fill", color)
           .style("opacity", "0.4");
-    lollipopsG.selectAll("mycircle")
-                .data(currentCity)
-                .join("circle")
-                  .attr("cx", function(d) { return x(d.date); })
-                  .attr("cy", function(d) { return y(d.actual_max_temp); })
-                  .attr("r", "6")
-                  .style("fill", color)
-                  .style("opacity", "0.6");
+
+  lollipopsG.selectAll("mycircle")
+          .data(currentCity)
+          .join("circle")
+              .classed("test", true)
+              .attr("cx", function(d) { return x(d.date); })
+              .attr("cy", function(d) { return y(d.actual_max_temp); })
+              .attr("r", "4")
+              .attr("opacity", "0.6")
+              .style("fill", color)
+              .on('mouseover', function (d, i) {
+                  d3.select(this).transition()
+                      .duration('50')
+                      .attr('opacity', '1');
+                  tooltipG.transition()
+                      .duration('50')
+                      .attr("opacity", '1');
+                  tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l) + ", " + (y(d.actual_max_temp)+padding.t) +")");
+                  tooltipDate.text(formatDate(d.date));
+                  tooltipTemp.text("Max Temperature: " + d.actual_max_temp);
+                  tooltipRain.text("Precipitation: " + d.actual_precipitation);
+              })
+              .on('mouseout', function (d, i) {
+                  d3.select(this).transition()
+                    .duration('50')
+                    .attr('opacity', '0.6');
+                  tooltipG.transition()
+                    .duration('50')
+                    .attr("opacity", '0');
+              });
 }
