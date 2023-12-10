@@ -33,7 +33,7 @@ var chartHeight = svgHeight - padding.t - padding.b;
 // To handle dates in datasets
 var parseDate = d3.timeParse('%Y-%m-%e');
 
-// Tooltip global variables 
+// Tooltip global variables
 let tooltipG;
 let tooltipDate;
 let tooltipTemp;
@@ -143,7 +143,6 @@ function setScalesAndAxes(){
 
 // Helper function to format dates to be displayed
 function formatDate(date){
-  console.log(date);
   let localeString = date.toLocaleString();
   let indexOfComma = localeString.indexOf(",");
   let formattedString = localeString.substr(0, indexOfComma);
@@ -441,93 +440,128 @@ function updateChart(isCity1){
   let lollipopsG = currentChartG.append("g")
     .classed("lollipops", true)
     .attr("transform", "translate("+padding.l+", "+padding.t+")");
-
   // Lines
-  lollipopsG.selectAll("myline")
+  let lines = lollipopsG.selectAll("myline")
      .data(currentCity)
      .join("line")
        .attr("x1", function(d) { return x(d.date); })
        .attr("x2", function(d) { return x(d.date); })
-       .attr("y1", function(d) { return y(d.actual_min_temp); })
-       .attr("y2", function(d) { return y(d.actual_max_temp); })
+       .attr("y1", "0")
+       .attr("y2", "0")
        .attr("stroke", color)
        .attr("stroke-width", "1px")
        .style("opacity", "0.7");
+  lines.transition()
+    .duration(1000)
+    .delay((d, i) => i * 10)
+    .attr("y1", function(d) { return y(d.actual_min_temp); })
+    .attr("y2", function(d) { return y(d.actual_max_temp); });
 
   // Circles for min temp
-  lollipopsG.selectAll("mycircle")
+  let minPrecipCircles = lollipopsG.selectAll("mycircle")
     .data(currentCity)
     .join("circle")
       .attr("cx", function(d) { return x(d.date); })
-      .attr("cy", function(d) { return y(d.actual_min_temp); })
+      .attr("cy", "0")
       .attr("r", function(d){ return radius(d.actual_precipitation); })
       .style("fill", color)
-      .style("opacity", "0.4");
-  lollipopsG.selectAll("mycircle")
+      .style("opacity", "0");
+  minPrecipCircles.transition()
+    .duration(1000)
+    .delay((d, i) => i * 10)
+    .attr("cy", function(d) { return y(d.actual_min_temp); })
+    .style("opacity", "0.4");
+
+  let minCircles = lollipopsG.selectAll("mycircle")
         .data(currentCity)
         .join("circle")
           .attr("cx", function(d) { return x(d.date); })
-          .attr("cy", function(d) { return y(d.actual_min_temp); })
+          .attr("cy", "0")
           .attr("r", "4")
           .style("fill", color)
-          .attr("opacity", "0.6")
-          .on('mouseover', function (d, i) {
-              d3.select(this).transition()
-                  .duration('50')
-                  .attr('opacity', '1');
-                  tooltipG.transition()
-                      .duration('50')
-                      .attr("opacity", '1');
-                  tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l) + ", " + (y(d.actual_min_temp)+padding.t) +")");
-                  tooltipDate.text(formatDate(d.date));
-                  tooltipTemp.text("Min Temperature: " + d.actual_min_temp);
-                  tooltipRain.text("Precipitation: " + d.actual_precipitation);
-          })
-          .on('mouseout', function (d, i) {
-              d3.select(this).transition()
-                .duration('50')
-                .attr('opacity', '0.6');
+          .attr("opacity", "0");
+
+    function hoveringMinTransition(){
+      minCircles.on('mouseover', function (d, i) {
+          d3.select(this).transition()
+              .duration('50')
+              .attr('opacity', '1');
               tooltipG.transition()
-                .duration('50')
-                .attr("opacity", '0');
-          });
-  // Circles for min temp
-  lollipopsG.selectAll("mycircle")
+                  .duration('50')
+                  .attr("opacity", '1');
+              tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l) + ", " + (y(d.actual_min_temp)+padding.t) +")");
+              tooltipDate.text(formatDate(d.date));
+              tooltipTemp.text("Min Temperature: " + d.actual_min_temp);
+              tooltipRain.text("Precipitation: " + d.actual_precipitation);
+      })
+      .on('mouseout', function (d, i) {
+          d3.select(this).transition()
+            .duration('50')
+            .attr('opacity', '0.6');
+          tooltipG.transition()
+            .duration('50')
+            .attr("opacity", '0');
+      });
+    };
+
+    minCircles.transition()
+      .duration(1000)
+      .delay((d, i) => i * 10)
+      .attr("cy", function(d) { return y(d.actual_min_temp); })
+      .attr("opacity", "0.6")
+      .end().then(hoveringMinTransition);
+  // Circles for max temp
+  let maxPrecipCircles = lollipopsG.selectAll("mycircle")
         .data(currentCity)
         .join("circle")
           .attr("cx", function(d) { return x(d.date); })
-          .attr("cy", function(d) { return y(d.actual_max_temp); })
+          .attr("cy", "0")
           .attr("r", function(d){ return radius(d.actual_precipitation); })
           .style("fill", color)
-          .style("opacity", "0.4");
+          .style("opacity", "0");
+  maxPrecipCircles.transition()
+    .duration(1000)
+    .delay((d, i) => i * 10)
+    .attr("cy", function(d) { return y(d.actual_max_temp); })
+    .style("opacity", "0.4");
 
-  lollipopsG.selectAll("mycircle")
+  let maxCircles = lollipopsG.selectAll("mycircle")
           .data(currentCity)
           .join("circle")
               .classed("test", true)
               .attr("cx", function(d) { return x(d.date); })
-              .attr("cy", function(d) { return y(d.actual_max_temp); })
+              .attr("cy", "0" )
               .attr("r", "4")
-              .attr("opacity", "0.6")
-              .style("fill", color)
-              .on('mouseover', function (d, i) {
-                  d3.select(this).transition()
-                      .duration('50')
-                      .attr('opacity', '1');
-                  tooltipG.transition()
-                      .duration('50')
-                      .attr("opacity", '1');
-                  tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l) + ", " + (y(d.actual_max_temp)+padding.t) +")");
-                  tooltipDate.text(formatDate(d.date));
-                  tooltipTemp.text("Max Temperature: " + d.actual_max_temp);
-                  tooltipRain.text("Precipitation: " + d.actual_precipitation);
-              })
-              .on('mouseout', function (d, i) {
-                  d3.select(this).transition()
-                    .duration('50')
-                    .attr('opacity', '0.6');
-                  tooltipG.transition()
-                    .duration('50')
-                    .attr("opacity", '0');
-              });
+              .attr("opacity", "0")
+              .style("fill", color);
+
+  function hoveringMaxTransition(){
+    maxCircles.on('mouseover', function (d, i) {
+        d3.select(this).transition()
+            .duration('50')
+            .attr('opacity', '1');
+        tooltipG.transition()
+            .duration('50')
+            .attr("opacity", '1');
+        tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l) + ", " + (y(d.actual_max_temp)+padding.t) +")");
+        tooltipDate.text(formatDate(d.date));
+        tooltipTemp.text("Max Temperature: " + d.actual_max_temp);
+        tooltipRain.text("Precipitation: " + d.actual_precipitation);
+    })
+    .on('mouseout', function (d, i) {
+        d3.select(this).transition()
+          .duration('50')
+          .attr('opacity', '0.6');
+        tooltipG.transition()
+          .duration('50')
+          .attr("opacity", '0');
+    });
+  }
+
+  maxCircles.transition()
+    .duration(1000)
+    .delay((d, i) => i * 10)
+    .attr("cy", function(d) { return y(d.actual_max_temp); })
+    .style("opacity", "0.6")
+    .end().then(hoveringMaxTransition);
 }
