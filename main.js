@@ -1,3 +1,10 @@
+/*
+Created by Sarah "Sally" Schafer
+For INFO 474 Interactive Information Visualizations
+Design Challenge 3 Final Deliverable
+*/
+
+
 // Initialize Global Variables
 let city1; // data
 let city2; // data
@@ -99,6 +106,7 @@ function onCity2Change(){
   csvProcessing(newCity2Name, false);
 }
 
+// Helper function to set the scales used each time the visualization is drawn
 function setScalesAndAxes(){
   y = d3.scaleLinear()
     .domain([recMinTemp, recMaxTemp])
@@ -170,7 +178,7 @@ function dataPreprocessor(row) {
 
 // Called whenever data needs to be loaded
 function csvProcessing(newCityName, isCity1){
-  if(newCityName != "NoCity"){
+  if(newCityName != "NoCity"){ // If the selected city is not no city
     let csvName = "/data/" + newCityName + ".csv";
     d3.csv(csvName, dataPreprocessor).then(function(data) {
       // determine where to save data
@@ -329,13 +337,13 @@ function csvProcessing(newCityName, isCity1){
       }
     });
   } else { // at least one of the cities has been selected with no city selected
-    if(isCity1){
+    if(isCity1){ // determine which city to make undefined
       city1 = undefined;
     } else {
       city2 = undefined;
     }
 
-    if(isCity1 && city2 != undefined){
+    if(isCity1 && city2 != undefined){ // still have city2 data to display
       // Remove all data currently on graph, so new data can be displayed
       chartG.selectAll(".chartG1").remove();
       chartG.selectAll(".chartG2").remove();
@@ -365,7 +373,7 @@ function csvProcessing(newCityName, isCity1){
       setScalesAndAxes();
       updateChart(false);
       callTooltip();
-    } else if(!isCity1 && city1 != undefined){
+    } else if(!isCity1 && city1 != undefined){ // still have city1 data to display
       // Remove all data currently on graph, so new data can be displayed
       chartG.selectAll(".chartG1").remove();
       chartG.selectAll(".chartG2").remove();
@@ -397,7 +405,7 @@ function csvProcessing(newCityName, isCity1){
       setScalesAndAxes();
       updateChart(true);
       callTooltip();
-    } else {
+    } else { // Neither city has data to be displayed
       chartG.selectAll(".chartG1").remove();
       chartG.selectAll(".chartG2").remove();
       chartG.selectAll(".axis")
@@ -426,12 +434,12 @@ function updateChart(isCity1){
   if(isCity1){
     currentChartG = chartG.append("g")
       .classed("chartG1", true);
-    color = "#4C8BD7";
+    color = "#5e50b5";
     currentCity = city1;
   } else {
     currentChartG = chartG.append("g")
       .classed("chartG2", true);
-    color = "#6157AF";
+    color = "#00d4d4";
     currentCity = city2;
   }
 
@@ -489,7 +497,7 @@ function updateChart(isCity1){
               tooltipG.transition()
                   .duration('50')
                   .attr("opacity", '1');
-              tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l) + ", " + (y(d.actual_min_temp)+padding.t) +")");
+              tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l + 3) + ", " + (y(d.actual_min_temp)+padding.t + 3) +")");
               tooltipDate.text(formatDate(d.date));
               tooltipTemp.text("Min Temperature: " + d.actual_min_temp);
               tooltipRain.text("Precipitation: " + d.actual_precipitation);
@@ -543,7 +551,7 @@ function updateChart(isCity1){
         tooltipG.transition()
             .duration('50')
             .attr("opacity", '1');
-        tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l) + ", " + (y(d.actual_max_temp)+padding.t) +")");
+        tooltipG.attr("transform", "translate("+ (x(d.date)+padding.l + 3) + ", " + (y(d.actual_max_temp)+padding.t + 3) +")");
         tooltipDate.text(formatDate(d.date));
         tooltipTemp.text("Max Temperature: " + d.actual_max_temp);
         tooltipRain.text("Precipitation: " + d.actual_precipitation);
@@ -562,6 +570,6 @@ function updateChart(isCity1){
     .duration(1000)
     .delay((d, i) => i * 10)
     .attr("cy", function(d) { return y(d.actual_max_temp); })
-    .style("opacity", "0.6")
+    .attr("opacity", "0.6")
     .end().then(hoveringMaxTransition);
 }
