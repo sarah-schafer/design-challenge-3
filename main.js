@@ -33,10 +33,31 @@ var chartHeight = svgHeight - padding.t - padding.b;
 // To handle dates in datasets
 var parseDate = d3.timeParse('%Y-%m-%e');
 
+// Tooltip global variables 
 let tooltipG;
 let tooltipDate;
 let tooltipTemp;
 let tooltipRain;
+
+
+// scrolling interaction
+let scrolling = false;
+let initialLoading = true;
+window.addEventListener('scroll',(event) => {
+     scrolling = true;
+});
+
+setInterval(() => {
+    if (scrolling) {
+        scrolling = false;
+        if(window.scrollY >= 500 & initialLoading){
+          csvProcessing(city1Name, true);
+          csvProcessing(city2Name, false);
+        }
+    }
+},300);
+
+
 
 // Handle Tooltip
 function callTooltip(){
@@ -106,7 +127,7 @@ function setScalesAndAxes(){
     .attr("text-anchor", "middle")
     .attr("font-size", "14")
     .attr("transform", "translate(14, " + (svgHeight/2)+ ") rotate(270)")
-    .text("Temperature (Degrees Celcius)");
+    .text("Temperature (Degrees Fahrenheit)");
 
   radius = d3.scaleLinear()
     .domain([0, Math.sqrt(recPrecipitation)])
@@ -122,6 +143,7 @@ function setScalesAndAxes(){
 
 // Helper function to format dates to be displayed
 function formatDate(date){
+  console.log(date);
   let localeString = date.toLocaleString();
   let indexOfComma = localeString.indexOf(",");
   let formattedString = localeString.substr(0, indexOfComma);
@@ -169,142 +191,145 @@ function csvProcessing(newCityName, isCity1){
         });
       }
 
-      // Determine scales
-      if(city1 && city2){ // both cities exist
-        let city1RecMinTemp = d3.min(city1.map(function(d){
-          return d.record_min_temp;
-        }));
-        let city1RecMaxTemp = d3.max(city1.map(function(d){
-          return d.record_max_temp;
-        }));
+      if(!initialLoading){ // Not the first time loading in city1 data
+        // Determine scales
+        if(city1 && city2){ // both cities exist
+          let city1RecMinTemp = d3.min(city1.map(function(d){
+            return d.record_min_temp;
+          }));
+          let city1RecMaxTemp = d3.max(city1.map(function(d){
+            return d.record_max_temp;
+          }));
 
-        let city2RecMinTemp = d3.min(city2.map(function(d){
-          return d.record_min_temp;
-        }));
-        let city2RecMaxTemp = d3.max(city2.map(function(d){
-          return d.record_max_temp;
-        }));
+          let city2RecMinTemp = d3.min(city2.map(function(d){
+            return d.record_min_temp;
+          }));
+          let city2RecMaxTemp = d3.max(city2.map(function(d){
+            return d.record_max_temp;
+          }));
 
-        if(city1RecMinTemp <= city2RecMinTemp){
+          if(city1RecMinTemp <= city2RecMinTemp){
+            recMinTemp = city1RecMinTemp;
+          } else {
+            recMinTemp = city2RecMinTemp;
+          }
+
+          if(city1RecMaxTemp >= city2RecMaxTemp){
+            recMaxTemp = city1RecMaxTemp;
+          } else {
+            recMaxTemp = city2RecMaxTemp;
+          }
+
+          let city1EarliestDay = d3.min(city1.map(function(d){
+            return d.date;
+          }));
+
+          let city1LatestDay = d3.max(city1.map(function(d){
+            return d.date;
+          }));
+          let city2EarliestDay = d3.min(city1.map(function(d){
+            return d.date;
+          }));
+
+          let city2LatestDay = d3.max(city1.map(function(d){
+            return d.date;
+          }));
+
+          if(city1EarliestDay <= city2EarliestDay){
+            earliestDay = city1EarliestDay;
+          } else {
+            earliestDay = city2EarliestDay;
+          }
+
+          if(city1LatestDay < city2LatestDay){
+            latestDay = city2LatestDay;
+          } else {
+            latestDay = city1LatestDay;
+          }
+
+          let city1RecPrecip = d3.max(city1.map(function(d){
+            return d.record_precipitation;
+          }));
+          let city2RecPrecip = d3.max(city2.map(function(d){
+            return d.record_precipitation;
+          }));
+          if(city1RecPrecip >= city2RecPrecip){
+            recPrecipitation = city1RecPrecip;
+          } else {
+            recPrecipitation = city2RecPrecip;
+          }
+
+
+        } else if(city1 && !initialLoading){ // city1 being loaded, city2 does not exist
+          let city1RecMinTemp = d3.min(city1.map(function(d){
+            return d.record_min_temp;
+          }));
+          let city1RecMaxTemp = d3.max(city1.map(function(d){
+            return d.record_max_temp;
+          }));
+
           recMinTemp = city1RecMinTemp;
-        } else {
-          recMinTemp = city2RecMinTemp;
-        }
-
-        if(city1RecMaxTemp >= city2RecMaxTemp){
           recMaxTemp = city1RecMaxTemp;
-        } else {
+
+          earliestDay = d3.min(city1.map(function(d){
+            return d.date;
+          }));
+
+          latestDay = d3.max(city1.map(function(d){
+            return d.date;
+          }));
+
+          recPrecipitation = d3.max(city1.map(function(d){
+            return d.record_precipitation;
+          }));
+        } else { // city2 being loaded, city1 does not exist
+          let city2RecMinTemp = d3.min(city2.map(function(d){
+            return d.record_min_temp;
+          }));
+          let city2RecMaxTemp = d3.max(city2.map(function(d){
+            return d.record_max_temp;
+          }));
+
+          recMinTemp = city2RecMinTemp;
           recMaxTemp = city2RecMaxTemp;
+
+          earliestDay = d3.min(city2.map(function(d){
+            return d.date;
+          }));
+
+          latestDay = d3.max(city2.map(function(d){
+            return d.date;
+          }));
+          recPrecipitation = d3.max(city2.map(function(d){
+            return d.record_precipitation;
+          }));
         }
 
-        let city1EarliestDay = d3.min(city1.map(function(d){
-          return d.date;
-        }));
+        // Remove all data currently on graph, so new data can be displayed
+        chartG.selectAll(".chartG1").remove();
+        chartG.selectAll(".chartG2").remove();
+        chartG.selectAll(".axis")
+          .remove();
+        chartG.selectAll(".tooltipG").remove();
 
-        let city1LatestDay = d3.max(city1.map(function(d){
-          return d.date;
-        }));
-        let city2EarliestDay = d3.min(city1.map(function(d){
-          return d.date;
-        }));
-
-        let city2LatestDay = d3.max(city1.map(function(d){
-          return d.date;
-        }));
-
-        if(city1EarliestDay <= city2EarliestDay){
-          earliestDay = city1EarliestDay;
-        } else {
-          earliestDay = city2EarliestDay;
+        setScalesAndAxes();
+        // if currently loading in city2 and city1 exists, draw city1 first
+        if(!isCity1 && city1){
+          updateChart(true);
+        }
+        // draw the chart we are currently working with
+        updateChart(isCity1);
+        // if currently loading city1 and city2 exists, draw city2
+        if(isCity1 && city2){
+          updateChart(false);
         }
 
-        if(city1LatestDay < city2LatestDay){
-          latestDay = city2LatestDay;
-        } else {
-          latestDay = city1LatestDay;
-        }
-
-        let city1RecPrecip = d3.max(city1.map(function(d){
-          return d.record_precipitation;
-        }));
-        let city2RecPrecip = d3.max(city2.map(function(d){
-          return d.record_precipitation;
-        }));
-        if(city1RecPrecip >= city2RecPrecip){
-          recPrecipitation = city1RecPrecip;
-        } else {
-          recPrecipitation = city2RecPrecip;
-        }
-
-
-      } else if(city1){ // city1 being loaded, city2 does not exist
-        let city1RecMinTemp = d3.min(city1.map(function(d){
-          return d.record_min_temp;
-        }));
-        let city1RecMaxTemp = d3.max(city1.map(function(d){
-          return d.record_max_temp;
-        }));
-
-        recMinTemp = city1RecMinTemp;
-        recMaxTemp = city1RecMaxTemp;
-
-        earliestDay = d3.min(city1.map(function(d){
-          return d.date;
-        }));
-
-        latestDay = d3.max(city1.map(function(d){
-          return d.date;
-        }));
-
-        recPrecipitation = d3.max(city1.map(function(d){
-          return d.record_precipitation;
-        }));
-      } else { // city2 being loaded, city1 does not exist
-        let city2RecMinTemp = d3.min(city2.map(function(d){
-          return d.record_min_temp;
-        }));
-        let city2RecMaxTemp = d3.max(city2.map(function(d){
-          return d.record_max_temp;
-        }));
-
-        recMinTemp = city2RecMinTemp;
-        recMaxTemp = city2RecMaxTemp;
-
-        earliestDay = d3.min(city2.map(function(d){
-          return d.date;
-        }));
-
-        latestDay = d3.max(city2.map(function(d){
-          return d.date;
-        }));
-        recPrecipitation = d3.max(city2.map(function(d){
-          return d.record_precipitation;
-        }));
+        callTooltip();
+      } else { // is first time loading in city1 data, change boolean value
+        initialLoading = false;
       }
-
-      // Remove all data currently on graph, so new data can be displayed
-      chartG.selectAll(".chartG1").remove();
-      chartG.selectAll(".chartG2").remove();
-      chartG.selectAll(".axis")
-        .remove();
-      chartG.selectAll(".tooltipG").remove();
-
-      setScalesAndAxes();
-
-      // if currently loading in city2 and city1 exists, draw city1 first
-      if(!isCity1 && city1){
-        updateChart(true);
-      }
-      // draw the chart we are currently working with
-      updateChart(isCity1);
-      // if currently loading city1 and city2 exists, draw city2
-      if(isCity1 && city2){
-        updateChart(false);
-      }
-
-      callTooltip();
     });
-  } else {
+  } else { // at least one of the cities has been selected with no city selected
     if(isCity1){
       city1 = undefined;
     } else {
@@ -391,10 +416,6 @@ function csvProcessing(newCityName, isCity1){
     }
   }
 }
-
-// Call functions with defaults when loading the page
-csvProcessing(city1Name, true);
-csvProcessing(city2Name, false);
 
 
 // Called whenever lollipops need to be drawn
